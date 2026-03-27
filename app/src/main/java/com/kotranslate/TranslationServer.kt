@@ -14,7 +14,7 @@ import kotlin.coroutines.resumeWithException
 class TranslationServer(
     private val context: Context,
     port: Int = DEFAULT_PORT
-) : NanoHTTPD(port) {
+) : NanoHTTPD("0.0.0.0", port) {
 
     companion object {
         const val DEFAULT_PORT = 8787
@@ -32,10 +32,10 @@ class TranslationServer(
         val uri = session.uri
         val method = session.method
 
-        Log.d(TAG, "$method $uri")
+        Log.d(TAG, ">>> Incoming request: $method $uri")
 
         return try {
-            when {
+            val response = when {
                 method == Method.GET && uri == "/status" -> handleStatus()
                 method == Method.GET && uri == "/languages" -> handleLanguages()
                 method == Method.POST && uri == "/translate" -> handleTranslate(session)
@@ -45,8 +45,10 @@ class TranslationServer(
                 method == Method.POST && uri == "/models/delete" -> handleModelDelete(session)
                 else -> jsonError(Response.Status.NOT_FOUND, "Unknown endpoint: $uri")
             }
+            Log.d(TAG, "<<< Response sent for: $method $uri")
+            response
         } catch (e: Exception) {
-            Log.e(TAG, "Error handling $uri", e)
+            Log.e(TAG, "!!! FATAL ERROR handling $uri", e)
             jsonError(Response.Status.INTERNAL_ERROR, e.message ?: "Internal server error")
         }
     }
@@ -249,11 +251,20 @@ class TranslationServer(
     }
 
     private fun readBody(session: IHTTPSession): String {
-        val contentLength = session.headers["content-length"]?.toIntOrNull() ?: 0
-        if (contentLength == 0) return "{}"
-        val buffer = ByteArray(contentLength)
-        session.inputStream.read(buffer, 0, contentLength)
-        return String(buffer)
+        try {
+            // CRITICAL: NanoHTTPD requires parseBody() to be called for POST requests
+            // Reading inputStream directly can cause server to hang on subsequent requests
+            val files = mutableMapOf<String, String>()
+            session.parseBody(files)
+            
+            // For POST with JSON body, NanoHTTPD puts it in "postData" key
+            val body = files["postData"] ?: "{}"
+            Log.d(TAG, "Body read: ${body.take(100)}...") // Log first 100 chars
+            return body
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading body", e)
+            return "{}"
+        }
     }
 
     private fun jsonResponse(
@@ -261,7 +272,7 @@ class TranslationServer(
         status: Response.Status = Response.Status.OK
     ): Response {
         val json = gson.toJson(data)
-        return newFixedLengthResponse(status, "application/json", json)
+        return newFixedLengthResponse(status, "application/json; charset=utf-8", json)
     }
 
     private fun jsonError(status: Response.Status, message: String): Response {

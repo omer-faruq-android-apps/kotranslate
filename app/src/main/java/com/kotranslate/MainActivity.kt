@@ -1,9 +1,13 @@
 package com.kotranslate
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -65,6 +69,16 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh battery optimization state when returning from settings
+        val vm = ViewModelProvider(
+            this,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+        )[MainViewModel::class.java]
+        vm.refreshBatteryOptimization()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,6 +133,21 @@ fun MainScreen() {
                         clipboardManager.setText(AnnotatedString(address))
                     }
                 )
+            }
+
+            // Battery optimization warning
+            if (state.batteryOptimized) {
+                item {
+                    BatteryOptimizationCard(
+                        onRequestExemption = {
+                            val intent = Intent(
+                                android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                Uri.parse("package:${context.packageName}")
+                            )
+                            context.startActivity(intent)
+                        }
+                    )
+                }
             }
 
             // Error message
@@ -367,6 +396,58 @@ fun LanguageCard(
                 IconButton(onClick = onDownload) {
                     Icon(Icons.Default.Download, "Download", tint = MaterialTheme.colorScheme.primary)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun BatteryOptimizationCard(onRequestExemption: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFF3E0)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = Color(0xFFE65100),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Battery Optimization Active",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = Color(0xFFE65100)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Android may stop the server when the screen is off. " +
+                    "Disable battery optimization for reliable background operation.",
+                fontSize = 13.sp,
+                color = Color(0xFF795548)
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = onRequestExemption,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFE65100)
+                )
+            ) {
+                Icon(
+                    Icons.Default.BatteryAlert,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Disable Battery Optimization")
             }
         }
     }

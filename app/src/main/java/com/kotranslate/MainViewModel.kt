@@ -3,6 +3,7 @@ package com.kotranslate
 import android.app.Application
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,8 @@ data class UiState(
     val models: List<ModelInfo> = emptyList(),
     val isLoadingModels: Boolean = true,
     val downloadingLanguages: Set<String> = emptySet(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val batteryOptimized: Boolean = true
 )
 
 class MainViewModel(private val app: Application) : AndroidViewModel(app) {
@@ -30,11 +32,18 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
     init {
         refreshIp()
         refreshModels()
+        refreshBatteryOptimization()
     }
 
     fun refreshIp() {
         val ip = NetworkUtils.getLocalIpAddress(app)
         _uiState.value = _uiState.value.copy(ipAddress = ip)
+    }
+
+    fun refreshBatteryOptimization() {
+        val pm = app.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
+        val isIgnoring = pm.isIgnoringBatteryOptimizations(app.packageName)
+        _uiState.value = _uiState.value.copy(batteryOptimized = !isIgnoring)
     }
 
     fun refreshModels() {
