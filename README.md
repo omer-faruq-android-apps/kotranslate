@@ -9,7 +9,7 @@
 - **Offline Translation:** Uses Google ML Kit's on-device translation models
 - **56 Languages Supported:** Including English, Spanish, French, German, Chinese, Japanese, Arabic, and more
 - **Local HTTP Server:** Exposes REST API via NanoHTTPD on port 8787
-- **Zero-Config for Android KOReader:** Automatically works with `localhost:8787`
+- **Zero-Config for Android KOReader:** Automatically works with `http://127.0.0.1:8787`
 - **WiFi Support:** External e-readers (Kobo, Kindle) can connect via LAN IP
 - **Language Model Management:** Download and delete models directly from the app
 - **Foreground Service:** Keeps server running in the background
@@ -38,7 +38,7 @@ No need to install Android SDK, JDK, or Gradle on your machine. Everything runs 
 
 ```powershell
 # Navigate to the project directory
-cd C:\Users\Lenovo\source\Android\OfflineGoogleTranslator
+cd "PATH_TO_KOTRANSLATE"
 
 # Build the Docker image (first time only, ~5-10 minutes)
 docker build -t kotranslate-builder .
@@ -346,10 +346,4 @@ This app uses **Google ML Kit** for on-device translation. By using this app, yo
 
 ## Contributing
 
-This is a companion app for the **KOReader Offline Google Translator** plugin. For issues or feature requests, please refer to the main plugin repository.
-
----
-
-## Version
-
-**1.0.0** — Initial release
+This is a companion app for the [**KOTranslate** plugin](https://github.com/omer-faruq/kotranslate.koplugin). For issues or feature requests, please refer to the main plugin repository.
